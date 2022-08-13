@@ -3,6 +3,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda-nodejs";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as events from "aws-cdk-lib/aws-events";
 import * as targets from "aws-cdk-lib/aws-events-targets";
+import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import { Construct } from "constructs";
 
 export class QueueStack extends Stack {
@@ -24,5 +25,17 @@ export class QueueStack extends Stack {
       schedule: events.Schedule.cron({}),
       targets: [new targets.LambdaFunction(orderLambda)],
     });
+
+    this.createCloudWatchDashboard(orderQueue);
+  }
+
+  private createCloudWatchDashboard(orderQueue: sqs.Queue) {
+    const dashboard = new cloudwatch.Dashboard(this, "OrderDashboard");
+    dashboard.addWidgets(
+      new cloudwatch.GraphWidget({
+        title: "New queue objects",
+        left: [orderQueue.metricNumberOfMessagesSent()],
+      })
+    );
   }
 }

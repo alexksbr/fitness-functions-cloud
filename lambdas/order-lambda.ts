@@ -12,7 +12,7 @@ export async function handler() {
   }
 
   await sqs
-    .sendMessage({ QueueUrl: orderQueueUrl, MessageBody: "Hello world" })
+    .sendMessage({ QueueUrl: orderQueueUrl, MessageBody: "New order received" })
     .promise();
 
   console.log("Message sent to order queue");
