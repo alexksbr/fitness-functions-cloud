@@ -1,6 +1,8 @@
-import { Duration, lambda_layer_awscli, Stack, StackProps } from "aws-cdk-lib";
-import * as sqs from "aws-cdk-lib/aws-sqs";
+import { Duration, Stack, StackProps } from "aws-cdk-lib";
 import * as lambda from "aws-cdk-lib/aws-lambda-nodejs";
+import * as sqs from "aws-cdk-lib/aws-sqs";
+import * as events from "aws-cdk-lib/aws-events";
+import * as targets from "aws-cdk-lib/aws-events-targets";
 import { Construct } from "constructs";
 
 export class QueueStack extends Stack {
@@ -17,5 +19,10 @@ export class QueueStack extends Stack {
     });
 
     orderQueue.grantSendMessages(orderLambda);
+
+    new events.Rule(this, "OrderLambdaEventRule", {
+      schedule: events.Schedule.cron({}),
+      targets: [new targets.LambdaFunction(orderLambda)],
+    });
   }
 }
