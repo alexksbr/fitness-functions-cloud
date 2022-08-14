@@ -35,6 +35,11 @@ export class QueueStack extends Stack {
       new cloudwatch.GraphWidget({
         title: "New queue objects",
         left: [orderQueue.metricNumberOfMessagesSent()],
+        leftAnnotations: [
+          { value: 60, color: "#ff0000", fill: cloudwatch.Shading.BELOW },
+          { value: 225, color: "#0000ff", fill: cloudwatch.Shading.BELOW },
+          { value: 225, color: "#ff0000", fill: cloudwatch.Shading.ABOVE },
+        ],
       })
     );
   }
