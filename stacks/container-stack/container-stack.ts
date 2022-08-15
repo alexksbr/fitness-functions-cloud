@@ -12,7 +12,9 @@ export class ContainerStack extends Stack {
 
     cluster.addCapacity("DefaultAutoScalingGroupCapacity", {
       instanceType: new ec2.InstanceType("t2.small"),
-      desiredCapacity: 3,
+      desiredCapacity: 2,
+      minCapacity: 2,
+      maxCapacity: 4,
     });
 
     const taskDefinition = new ecs.Ec2TaskDefinition(this, "TaskDef");
@@ -26,6 +28,7 @@ export class ContainerStack extends Stack {
     new ecsPatterns.ApplicationLoadBalancedEc2Service(this, "Service", {
       cluster,
       taskDefinition,
+      desiredCount: 2,
     });
   }
 }
