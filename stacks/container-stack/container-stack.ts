@@ -24,7 +24,7 @@ export class ContainerStack extends Stack {
       image: ecs.ContainerImage.fromAsset(
         "./stacks/container-stack/services/stock-service"
       ),
-      portMappings: [{ containerPort: 80 }],
+      portMappings: [{ containerPort: 8080 }],
       memoryLimitMiB: 512,
     });
 
