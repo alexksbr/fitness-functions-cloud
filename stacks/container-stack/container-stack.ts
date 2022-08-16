@@ -2,7 +2,6 @@ import { Stack, StackProps } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as ecs from "aws-cdk-lib/aws-ecs";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
-import * as ecsPatterns from "aws-cdk-lib/aws-ecs-patterns";
 
 export class ContainerStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -17,18 +16,22 @@ export class ContainerStack extends Stack {
       maxCapacity: 4,
     });
 
-    const taskDefinition = new ecs.Ec2TaskDefinition(this, "TaskDef");
-
-    taskDefinition.addContainer("DefaultContainer", {
-      image: ecs.ContainerImage.fromRegistry("amazon/amazon-ecs-sample"),
-      memoryLimitMiB: 512,
+    const taskDefinition = new ecs.Ec2TaskDefinition(
+      this,
+      "StockServiceTaskDefinition"
+    );
+    taskDefinition.addContainer("StockServiceContainer", {
+      image: ecs.ContainerImage.fromAsset(
+        "./stacks/container-stack/services/stock-service"
+      ),
       portMappings: [{ containerPort: 80 }],
+      memoryLimitMiB: 512,
     });
 
-    new ecsPatterns.ApplicationLoadBalancedEc2Service(this, "Service", {
+    new ecs.Ec2Service(this, "StockService", {
       cluster,
       taskDefinition,
-      desiredCount: 2,
+      desiredCount: 1,
     });
   }
 }

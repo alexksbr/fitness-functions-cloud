@@ -15,7 +15,7 @@ export class QueueStack extends Stack {
     });
 
     const orderLambda = new lambda.NodejsFunction(this, "OrderLambda", {
-      entry: "lambdas/order-lambda.ts",
+      entry: "stacks/queue-stack/order-lambda.ts",
       environment: { ORDER_QUEUE_URL: orderQueue.queueUrl },
     });
 
