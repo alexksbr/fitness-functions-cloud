@@ -1,0 +1,12 @@
+{
+    "name": "financial-service",
+    "version": "1.0.0",
+    "description": "Financial Service",
+    "main": "server.js",
+    "scripts": {
+      "start": "node server.js"
+    },
+    "dependencies": {
+      "express": "^4.18.1"
+    }
+  }
