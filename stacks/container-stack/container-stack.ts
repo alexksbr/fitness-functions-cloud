@@ -4,6 +4,7 @@ import * as ecs from "aws-cdk-lib/aws-ecs";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as cloudmap from "aws-cdk-lib/aws-servicediscovery";
 import * as ecsPatterns from "aws-cdk-lib/aws-ecs-patterns";
+import * as iam from "aws-cdk-lib/aws-iam";
 
 export class ContainerStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -32,7 +33,7 @@ export class ContainerStack extends Stack {
       memoryLimitMiB: 512,
     });
 
-    new ecs.Ec2Service(this, "StockService", {
+    const stockService = new ecs.Ec2Service(this, "StockService", {
       cluster,
       taskDefinition: stockServiceTaskDefinition,
       desiredCount: 1,
@@ -50,7 +51,16 @@ export class ContainerStack extends Stack {
       portMappings: [{ containerPort: 8080 }],
       memoryLimitMiB: 512,
       logging: ecs.LogDrivers.awsLogs({ streamPrefix: "FinancialService" }),
+      environment: {
+        STOCK_SERVICE_ID: stockService.cloudMapService?.serviceId ?? "",
+      },
     });
+    financialServiceTaskDefinition.addToTaskRolePolicy(
+      new iam.PolicyStatement({
+        resources: ["*"],
+        actions: ["servicediscovery:List*"],
+      })
+    );
 
     new ecsPatterns.ApplicationLoadBalancedEc2Service(
       this,
