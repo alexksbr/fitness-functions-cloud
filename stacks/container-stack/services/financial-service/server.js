@@ -1,6 +1,7 @@
 "use strict";
 
 const express = require("express");
+const AWS = require("aws-sdk");
 
 const PORT = 8080;
 const HOST = "0.0.0.0";
