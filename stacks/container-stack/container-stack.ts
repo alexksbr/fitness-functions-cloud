@@ -5,6 +5,7 @@ import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as cloudmap from "aws-cdk-lib/aws-servicediscovery";
 import * as ecsPatterns from "aws-cdk-lib/aws-ecs-patterns";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as ecrAssets from "aws-cdk-lib/aws-ecr-assets";
 
 export class ContainerStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -26,8 +27,11 @@ export class ContainerStack extends Stack {
       "StockServiceTaskDefinition"
     );
     stockServiceTaskDefinition.addContainer("StockServiceContainer", {
-      image: ecs.ContainerImage.fromAsset(
-        "./stacks/container-stack/services/stock-service"
+      image: ecs.ContainerImage.fromDockerImageAsset(
+        new ecrAssets.DockerImageAsset(this, "StockServiceDockerImageAsset", {
+          directory: "./stacks/container-stack/services/stock-service",
+          platform: ecrAssets.Platform.LINUX_AMD64,
+        })
       ),
       portMappings: [{ containerPort: 8080 }],
       memoryLimitMiB: 512,
@@ -45,8 +49,15 @@ export class ContainerStack extends Stack {
       "FinancialServiceTaskDefinition"
     );
     financialServiceTaskDefinition.addContainer("FinancialServiceContainer", {
-      image: ecs.ContainerImage.fromAsset(
-        "./stacks/container-stack/services/financial-service"
+      image: ecs.ContainerImage.fromDockerImageAsset(
+        new ecrAssets.DockerImageAsset(
+          this,
+          "FinancialServiceDockerImageAsset",
+          {
+            directory: "./stacks/container-stack/services/financial-service",
+            platform: ecrAssets.Platform.LINUX_AMD64,
+          }
+        )
       ),
       portMappings: [{ containerPort: 8080 }],
       memoryLimitMiB: 512,
