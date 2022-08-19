@@ -34,5 +34,9 @@ app.get("/stocks", async (req, res) => {
   }
 });
 
+app.get("/", (req, res) => {
+  res.send({});
+});
+
 app.listen(PORT, HOST);
 console.log(`Running on http://${HOST}:${PORT}`);
