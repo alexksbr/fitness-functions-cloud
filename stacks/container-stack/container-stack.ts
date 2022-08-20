@@ -15,12 +15,25 @@ export class ContainerStack extends Stack {
       defaultCloudMapNamespace: { name: "CloudMap" },
     });
 
-    cluster.addCapacity("DefaultAutoScalingGroupCapacity", {
-      instanceType: new ec2.InstanceType("t2.small"),
-      desiredCapacity: 2,
-      minCapacity: 2,
-      maxCapacity: 4,
+    const autoscalingGroup = cluster.addCapacity(
+      "DefaultAutoScalingGroupCapacity",
+      {
+        instanceType: new ec2.InstanceType("t2.small"),
+        desiredCapacity: 2,
+        minCapacity: 2,
+        maxCapacity: 4,
+      }
+    );
+
+    const securityGroup = new ec2.SecurityGroup(this, "InstanceSecurityGroup", {
+      vpc: cluster.vpc,
+      allowAllOutbound: true,
     });
+    securityGroup.addIngressRule(
+      securityGroup,
+      ec2.Port.tcpRange(32768, 65535)
+    );
+    autoscalingGroup.addSecurityGroup(securityGroup);
 
     const stockServiceTaskDefinition = new ecs.Ec2TaskDefinition(
       this,
