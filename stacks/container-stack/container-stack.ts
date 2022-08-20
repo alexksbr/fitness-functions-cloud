@@ -35,28 +35,15 @@ export class ContainerStack extends Stack {
     );
     autoscalingGroup.addSecurityGroup(securityGroup);
 
-    const stockServiceTaskDefinition = new ecs.Ec2TaskDefinition(
-      this,
-      "StockServiceTaskDefinition"
-    );
-    stockServiceTaskDefinition.addContainer("StockServiceContainer", {
-      image: ecs.ContainerImage.fromDockerImageAsset(
-        new ecrAssets.DockerImageAsset(this, "StockServiceDockerImageAsset", {
-          directory: "./stacks/container-stack/services/stock-service",
-          platform: ecrAssets.Platform.LINUX_AMD64,
-        })
-      ),
-      portMappings: [{ containerPort: 8080 }],
-      memoryLimitMiB: 512,
-    });
+    const stockService = this.configureStockService(cluster);
 
-    const stockService = new ecs.Ec2Service(this, "StockService", {
-      cluster,
-      taskDefinition: stockServiceTaskDefinition,
-      desiredCount: 1,
-      cloudMapOptions: { dnsRecordType: cloudmap.DnsRecordType.SRV },
-    });
+    this.configureFinancialService(stockService, cluster);
+  }
 
+  private configureFinancialService(
+    stockService: ecs.Ec2Service,
+    cluster: ecs.Cluster
+  ) {
     const financialServiceTaskDefinition = new ecs.Ec2TaskDefinition(
       this,
       "FinancialServiceTaskDefinition"
@@ -95,5 +82,29 @@ export class ContainerStack extends Stack {
         desiredCount: 1,
       }
     );
+  }
+
+  private configureStockService(cluster: ecs.Cluster) {
+    const stockServiceTaskDefinition = new ecs.Ec2TaskDefinition(
+      this,
+      "StockServiceTaskDefinition"
+    );
+    stockServiceTaskDefinition.addContainer("StockServiceContainer", {
+      image: ecs.ContainerImage.fromDockerImageAsset(
+        new ecrAssets.DockerImageAsset(this, "StockServiceDockerImageAsset", {
+          directory: "./stacks/container-stack/services/stock-service",
+          platform: ecrAssets.Platform.LINUX_AMD64,
+        })
+      ),
+      portMappings: [{ containerPort: 8080 }],
+      memoryLimitMiB: 512,
+    });
+
+    return new ecs.Ec2Service(this, "StockService", {
+      cluster,
+      taskDefinition: stockServiceTaskDefinition,
+      desiredCount: 1,
+      cloudMapOptions: { dnsRecordType: cloudmap.DnsRecordType.SRV },
+    });
   }
 }
