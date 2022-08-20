@@ -27,8 +27,9 @@ app.get("/stocks", async (req, res) => {
 
   try {
     const response = await axios.get(stockServiceUrl);
+    const stockValue = response.data.stockValue;
 
-    res.send([{ stockName: "XYZ INC", stockValue: 42 }]);
+    res.send([{ stockName: "XYZ INC", stockValue }]);
   } catch (error) {
     console.log("something went wrong:", error);
   }
