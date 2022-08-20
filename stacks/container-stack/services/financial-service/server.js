@@ -15,11 +15,15 @@ const app = express();
 app.get("/stocks", async (req, res) => {
   console.log("/stocks endpoint invoked");
 
-  const stockServiceInstance = (
+  const stockServiceInstances = (
     await serviceDiscovery
       .listInstances({ ServiceId: stockServiceId })
       .promise()
-  ).Instances[0].Attributes;
+  ).Instances;
+  if (stockServiceInstances.length === 0) {
+    throw Error("No stock service instances available");
+  }
+  const stockServiceInstance = stockServiceInstances[0].Attributes;
 
   console.log("obtained url from service discovery");
 
