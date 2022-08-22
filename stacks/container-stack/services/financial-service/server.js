@@ -8,8 +8,11 @@ const PORT = 8080;
 const HOST = "0.0.0.0";
 const REGION = "eu-central-1";
 
-const serviceDiscovery = new AWS.ServiceDiscovery({ region: REGION });
 const stockServiceId = process.env.STOCK_SERVICE_ID;
+const stockCacheTableName = process.env.STOCK_CACHE_TABLE_NAME;
+
+const serviceDiscovery = new AWS.ServiceDiscovery({ region: REGION });
+const dynamoDB = new AWS.DynamoDB({ region: REGION });
 
 const app = express();
 app.get("/stocks", async (req, res) => {
@@ -32,6 +35,17 @@ app.get("/stocks", async (req, res) => {
   try {
     const response = await axios.get(stockServiceUrl);
     const stockValue = response.data.stockValue;
+
+    await dynamoDB
+      .putItem({
+        TableName: stockCacheTableName,
+        Item: AWS.DynamoDB.Converter.marshall({
+          key: "latest-stock-value",
+          value: stockValue,
+        }),
+      })
+      .promise();
+    console.log("stored latest stock value in cache");
 
     res.send([{ stockName: "XYZ INC", stockValue }]);
   } catch (error) {

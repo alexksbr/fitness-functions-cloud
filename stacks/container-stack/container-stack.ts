@@ -6,6 +6,7 @@ import * as cloudmap from "aws-cdk-lib/aws-servicediscovery";
 import * as ecsPatterns from "aws-cdk-lib/aws-ecs-patterns";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as ecrAssets from "aws-cdk-lib/aws-ecr-assets";
+import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 
 export class ContainerStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -44,6 +45,11 @@ export class ContainerStack extends Stack {
     stockService: ecs.Ec2Service,
     cluster: ecs.Cluster
   ) {
+    const stockCacheTable = new dynamodb.Table(this, "StockCache", {
+      partitionKey: { name: "key", type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+    });
+
     const financialServiceTaskDefinition = new ecs.Ec2TaskDefinition(
       this,
       "FinancialServiceTaskDefinition"
@@ -64,6 +70,7 @@ export class ContainerStack extends Stack {
       logging: ecs.LogDrivers.awsLogs({ streamPrefix: "FinancialService" }),
       environment: {
         STOCK_SERVICE_ID: stockService.cloudMapService?.serviceId ?? "",
+        STOCK_CACHE_TABLE_NAME: stockCacheTable.tableName,
       },
     });
     financialServiceTaskDefinition.addToTaskRolePolicy(
@@ -72,6 +79,7 @@ export class ContainerStack extends Stack {
         actions: ["servicediscovery:List*"],
       })
     );
+    stockCacheTable.grantReadWriteData(financialServiceTaskDefinition.taskRole);
 
     new ecsPatterns.ApplicationLoadBalancedEc2Service(
       this,
