@@ -3,6 +3,7 @@
 const express = require("express");
 const AWS = require("aws-sdk");
 const axios = require("axios").default;
+const CircuitBreaker = require("opossum");
 
 const PORT = 8080;
 const HOST = "0.0.0.0";
@@ -18,23 +19,11 @@ const app = express();
 app.get("/stocks", async (req, res) => {
   console.log("/stocks endpoint invoked");
 
-  const stockServiceInstances = (
-    await serviceDiscovery
-      .listInstances({ ServiceId: stockServiceId })
-      .promise()
-  ).Instances;
-  if (stockServiceInstances.length === 0) {
-    throw Error("No stock service instances available");
-  }
-  const stockServiceInstance = stockServiceInstances[0].Attributes;
-
-  console.log("obtained url from service discovery");
-
-  const stockServiceUrl = `http://${stockServiceInstance.AWS_INSTANCE_IPV4}:${stockServiceInstance.AWS_INSTANCE_PORT}/stockvalue`;
-
   try {
-    const response = await axios.get(stockServiceUrl);
-    const stockValue = response.data.stockValue;
+    const circuitBreaker = new CircuitBreaker(getInstanceAndRequestStockValue);
+    circuitBreaker.fallback(getStockValueFromCache);
+
+    const stockValue = await circuitBreaker.fire();
 
     await dynamoDB
       .putItem({
@@ -59,3 +48,33 @@ app.get("/", (req, res) => {
 
 app.listen(PORT, HOST);
 console.log(`Running on http://${HOST}:${PORT}`);
+
+async function getInstanceAndRequestStockValue() {
+  const stockServiceInstances = (
+    await serviceDiscovery
+      .listInstances({ ServiceId: stockServiceId })
+      .promise()
+  ).Instances;
+  if (stockServiceInstances.length === 0) {
+    throw Error("No stock service instances available");
+  }
+  const stockServiceInstance = stockServiceInstances[0].Attributes;
+
+  console.log("obtained url from service discovery");
+
+  const stockServiceUrl = `http://${stockServiceInstance.AWS_INSTANCE_IPV4}:${stockServiceInstance.AWS_INSTANCE_PORT}/stockvalue`;
+
+  const response = await axios.get(stockServiceUrl);
+  return response.data.stockValue;
+}
+
+async function getStockValueFromCache() {
+  const data = await dynamoDB
+    .getItem({
+      TableName: stockCacheTableName,
+      Key: AWS.DynamoDB.Converter.marshall({ key: "latest-stock-value" }),
+    })
+    .promise();
+
+  return AWS.DynamoDB.Converter.unmarshall(data.Item).value;
+}
