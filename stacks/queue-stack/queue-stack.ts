@@ -14,12 +14,17 @@ export class QueueStack extends Stack {
       visibilityTimeout: Duration.seconds(300),
     });
 
+    const dlq = new sqs.Queue(this, "OrderDlq", {
+      visibilityTimeout: Duration.seconds(300),
+    });
+
     const orderLambda = new lambda.NodejsFunction(this, "OrderLambda", {
       entry: "stacks/queue-stack/order-lambda.ts",
       environment: { ORDER_QUEUE_URL: orderQueue.queueUrl },
     });
 
     orderQueue.grantSendMessages(orderLambda);
+    dlq.grantSendMessages(orderLambda);
 
     new events.Rule(this, "OrderLambdaEventRule", {
       schedule: events.Schedule.cron({}),
