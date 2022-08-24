@@ -1,0 +1,8 @@
+Resources:
+  LambdaDlqCheck:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: LambdaDlqCheck
+      Source:
+        Owner: AWS
+        SourceIdentifier: LAMBDA_DLQ_CHECK
