@@ -3,6 +3,7 @@ import { Construct } from "constructs";
 import * as lambda from "aws-cdk-lib/aws-lambda-nodejs";
 import * as events from "aws-cdk-lib/aws-events";
 import * as targets from "aws-cdk-lib/aws-events-targets";
+import * as cloudtrail from "aws-cdk-lib/aws-cloudtrail";
 
 export class OrchestrationStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -40,5 +41,14 @@ export class OrchestrationStack extends Stack {
       schedule: events.Schedule.cron({ minute: "*" }),
       targets: [new targets.LambdaFunction(orderLambda)],
     });
+
+    this.enableCloudTrail();
+  }
+
+  private enableCloudTrail() {
+    const trail = new cloudtrail.Trail(this, "LambdaTrail", {
+      sendToCloudWatchLogs: true,
+    });
+    trail.logAllLambdaDataEvents();
   }
 }
