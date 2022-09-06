@@ -50,5 +50,23 @@ export class OrchestrationStack extends Stack {
       sendToCloudWatchLogs: true,
     });
     trail.logAllLambdaDataEvents();
+
+    trail.logGroup?.addMetricFilter("AllLambdaInvocations", {
+      filterPattern: {
+        logPatternString:
+          '{ $.eventName = "Invoke" && $.requestParameters.functionName = "*OrchestrationStack*" }',
+      },
+      metricNamespace: "LambdaInvocations",
+      metricName: "AllLambdaInvocations",
+    });
+
+    trail.logGroup?.addMetricFilter("PointToPointLambdaInvocations", {
+      filterPattern: {
+        logPatternString:
+          '{ $.eventName = "Invoke" && $.requestParameters.functionName = "*OrchestrationStack*" }',
+      },
+      metricNamespace: "LambdaInvocations",
+      metricName: "PointToPointLambdaInvocations",
+    });
   }
 }
