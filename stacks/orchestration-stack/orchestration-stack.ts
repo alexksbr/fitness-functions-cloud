@@ -5,25 +5,40 @@ import * as events from "aws-cdk-lib/aws-events";
 import * as targets from "aws-cdk-lib/aws-events-targets";
 import * as cloudtrail from "aws-cdk-lib/aws-cloudtrail";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
+import * as sns from "aws-cdk-lib/aws-sns";
+import * as subscriptions from "aws-cdk-lib/aws-sns-subscriptions";
 
 export class OrchestrationStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
+    const consumerOrderTopic = new sns.Topic(this, "ConsumerOrderTopic");
+
     const businessWarehouseLambda = new lambda.NodejsFunction(
       this,
       "BusinessWarehouseLambda",
-      { entry: "stacks/orchestration-stack/business-warehouse-lambda.ts" }
+      {
+        entry: "stacks/orchestration-stack/business-warehouse-lambda.ts",
+      }
     );
     const consumerWarehouseLambda = new lambda.NodejsFunction(
       this,
       "ConsumerWarehouseLambda",
-      { entry: "stacks/orchestration-stack/consumer-warehouse-lambda.ts" }
+      {
+        entry: "stacks/orchestration-stack/consumer-warehouse-lambda.ts",
+      }
     );
     const consumerLoyaltyLambda = new lambda.NodejsFunction(
       this,
       "ConsumerLoyaltyLambda",
       { entry: "stacks/orchestration-stack/consumer-loyalty-lambda.ts" }
+    );
+
+    consumerOrderTopic.addSubscription(
+      new subscriptions.LambdaSubscription(consumerWarehouseLambda)
+    );
+    consumerOrderTopic.addSubscription(
+      new subscriptions.LambdaSubscription(consumerLoyaltyLambda)
     );
 
     const orderLambda = new lambda.NodejsFunction(this, "OrderLambda", {
@@ -32,11 +47,13 @@ export class OrchestrationStack extends Stack {
         BUSINESS_WAREHOUSE_LAMBDA_NAME: businessWarehouseLambda.functionName,
         CONSUMER_WAREHOUSE_LAMBDA_NAME: consumerWarehouseLambda.functionName,
         CONSUMER_LOYALTY_LAMBDA_NAME: consumerLoyaltyLambda.functionName,
+        CONSUMER_ORDER_TOPIC_ARN: consumerOrderTopic.topicArn,
       },
     });
     businessWarehouseLambda.grantInvoke(orderLambda);
     consumerWarehouseLambda.grantInvoke(orderLambda);
     consumerLoyaltyLambda.grantInvoke(orderLambda);
+    consumerOrderTopic.grantPublish(orderLambda);
 
     new events.Rule(this, "OrderLambdaEventRule", {
       schedule: events.Schedule.cron({ minute: "*" }),
