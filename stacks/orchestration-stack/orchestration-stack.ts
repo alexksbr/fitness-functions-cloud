@@ -4,6 +4,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda-nodejs";
 import * as events from "aws-cdk-lib/aws-events";
 import * as targets from "aws-cdk-lib/aws-events-targets";
 import * as cloudtrail from "aws-cdk-lib/aws-cloudtrail";
+import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 
 export class OrchestrationStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -42,7 +43,9 @@ export class OrchestrationStack extends Stack {
       targets: [new targets.LambdaFunction(orderLambda)],
     });
 
-    this.enableCloudTrail();
+    const trail = this.enableCloudTrail();
+
+    this.addCloudWatchDashboard(trail);
   }
 
   private enableCloudTrail() {
@@ -51,22 +54,64 @@ export class OrchestrationStack extends Stack {
     });
     trail.logAllLambdaDataEvents();
 
-    trail.logGroup?.addMetricFilter("AllLambdaInvocations", {
-      filterPattern: {
-        logPatternString:
-          '{ $.eventName = "Invoke" && $.requestParameters.functionName = "*OrchestrationStack*" }',
-      },
-      metricNamespace: "LambdaInvocations",
-      metricName: "AllLambdaInvocations",
-    });
+    return trail;
+  }
 
-    trail.logGroup?.addMetricFilter("PointToPointLambdaInvocations", {
-      filterPattern: {
-        logPatternString:
-          '{ $.eventName = "Invoke" && $.requestParameters.functionName = "*OrchestrationStack*" }',
-      },
-      metricNamespace: "LambdaInvocations",
-      metricName: "PointToPointLambdaInvocations",
-    });
+  private addCloudWatchDashboard(trail: cloudtrail.Trail) {
+    const allLambdaInvocations = trail.logGroup?.addMetricFilter(
+      "AllLambdaInvocations",
+      {
+        filterPattern: {
+          logPatternString:
+            '{ $.eventName = "Invoke" && $.requestParameters.functionName = "*OrchestrationStack*" }',
+        },
+        metricNamespace: "LambdaInvocations",
+        metricName: "AllLambdaInvocations",
+      }
+    );
+
+    const pointToPointLambdaInvocations = trail.logGroup?.addMetricFilter(
+      "PointToPointLambdaInvocations",
+      {
+        filterPattern: {
+          logPatternString:
+            '{ $.eventName = "Invoke" && $.requestParameters.functionName = "*OrchestrationStack*" && $.userIdentity.principalId = "*Lambda*" }',
+        },
+        metricNamespace: "LambdaInvocations",
+        metricName: "PointToPointLambdaInvocations",
+      }
+    );
+
+    if (!allLambdaInvocations || !pointToPointLambdaInvocations) {
+      throw Error("Something went wrong when setting up metric filters");
+    }
+
+    const dashboard = new cloudwatch.Dashboard(this, "OrchestrationDashboard");
+    dashboard.addWidgets(
+      new cloudwatch.GraphWidget({
+        title: "Lambda invocations",
+        left: [
+          allLambdaInvocations.metric({ statistic: "sum" }),
+          pointToPointLambdaInvocations.metric({ statistic: "sum" }),
+        ],
+        width: 24,
+      })
+    );
+
+    dashboard.addWidgets(
+      new cloudwatch.GraphWidget({
+        title: "% of non-point-to-point Lambda invocations",
+        left: [
+          new cloudwatch.MathExpression({
+            expression: "(1 - ptp / all) * 100",
+            usingMetrics: {
+              all: allLambdaInvocations.metric({ statistic: "sum" }),
+              ptp: pointToPointLambdaInvocations.metric({ statistic: "sum" }),
+            },
+          }),
+        ],
+        width: 24,
+      })
+    );
   }
 }
