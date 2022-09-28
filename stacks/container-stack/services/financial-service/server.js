@@ -16,8 +16,8 @@ const serviceDiscovery = new AWS.ServiceDiscovery({ region: REGION });
 const dynamoDB = new AWS.DynamoDB({ region: REGION });
 
 const app = express();
-app.get("/stocks", async (req, res) => {
-  console.log("/stocks endpoint invoked");
+app.get("/financials", async (req, res) => {
+  console.log("/financials endpoint invoked");
 
   try {
     const circuitBreaker = new CircuitBreaker(getInstanceAndRequestStockValue);
